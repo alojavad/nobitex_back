@@ -40,13 +40,4 @@ router.get('/market-stats', async (req, res) => {
   }
 });
 
-// Health check endpoint
-router.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date(),
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-  });
-});
-
 module.exports = router;
