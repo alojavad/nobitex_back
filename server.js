@@ -34,6 +34,19 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Welcome to Nobitex API',
+    endpoints: {
+      health: '/health',
+      orders: '/api/orders',
+      trades: '/api/trades',
+      marketStats: '/api/market-stats'
+    }
+  });
+});
+
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'public')));

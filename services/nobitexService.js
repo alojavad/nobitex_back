@@ -4,11 +4,15 @@ const axios = require('axios');
 class NobitexService {
   constructor() {
     this.baseURL = 'https://api.nobitex.ir';
-    this.token = null;
+    this.token = process.env.NOBITEX_TOKEN || null;
   }
 
   async login() {
     try {
+      if (this.token) {
+        return this.token;
+      }
+      
       const response = await axios.post(`${this.baseURL}/auth/login/`, {
         username: process.env.NOBITEX_USERNAME,
         password: process.env.NOBITEX_PASSWORD
@@ -23,6 +27,10 @@ class NobitexService {
 
   async getOrders() {
     try {
+      if (!this.token) {
+        await this.login();
+      }
+      
       const response = await axios.post(`${this.baseURL}/market/orders/list`, {
         order: '-price',
         type: 'sell',
@@ -39,9 +47,15 @@ class NobitexService {
 
   async getTrades(srcCurrency = 'btc', dstCurrency = 'rls') {
     try {
+      if (!this.token) {
+        await this.login();
+      }
+      
       const response = await axios.post(`${this.baseURL}/market/trades/list`, {
         srcCurrency,
         dstCurrency
+      }, {
+        headers: { 'Authorization': `Token ${this.token}` }
       });
       return response.data;
     } catch (error) {
@@ -52,9 +66,15 @@ class NobitexService {
 
   async getMarketStats(srcCurrency = 'btc', dstCurrency = 'rls') {
     try {
+      if (!this.token) {
+        await this.login();
+      }
+      
       const response = await axios.post(`${this.baseURL}/market/stats`, {
         srcCurrency,
         dstCurrency
+      }, {
+        headers: { 'Authorization': `Token ${this.token}` }
       });
       return response.data;
     } catch (error) {
