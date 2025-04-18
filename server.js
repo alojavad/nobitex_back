@@ -8,11 +8,7 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? '*'
-    : '*'
-}));
+app.use(cors());
 app.use(express.json());
 
 // Serve static files in production
