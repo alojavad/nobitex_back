@@ -4,7 +4,8 @@ const router = express.Router();
 const nobitexService = require('../services/nobitexService');
 const Order = require('../models/Order');
 const Trade = require('../models/Trade');
-const MarketStats = require('../models/MarketStats');
+const MarketStat = require('../models/MarketStat');
+const mongoose = require('mongoose');
 
 // Get and save orders
 router.get('/orders', async (req, res) => {
@@ -32,11 +33,20 @@ router.get('/trades', async (req, res) => {
 router.get('/market-stats', async (req, res) => {
   try {
     const stats = await nobitexService.getMarketStats();
-    await MarketStats.create(stats.stats);
+    await MarketStat.create(stats.stats);
     res.json(stats);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Health check endpoint
+router.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date(),
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
 });
 
 module.exports = router;
