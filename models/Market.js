@@ -1,42 +1,48 @@
-// models/Trade.js
 const mongoose = require('mongoose');
 
-const tradeSchema = new mongoose.Schema({
-  id: {
+const marketSchema = new mongoose.Schema({
+  symbol: {
     type: String,
     required: true,
     unique: true
   },
-  orderId: {
+  baseCurrency: {
     type: String,
     required: true
   },
-  symbol: {
+  quoteCurrency: {
     type: String,
     required: true
   },
-  type: {
-    type: String,
-    enum: ['buy', 'sell'],
-    required: true
-  },
-  price: {
+  minPrice: {
     type: Number,
     required: true
   },
-  amount: {
+  maxPrice: {
     type: Number,
     required: true
   },
-  fee: {
+  minAmount: {
     type: Number,
     required: true
   },
-  feeCurrency: {
-    type: String,
+  maxAmount: {
+    type: Number,
     required: true
   },
-  createdAt: {
+  priceStep: {
+    type: Number,
+    required: true
+  },
+  amountStep: {
+    type: Number,
+    required: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  lastUpdate: {
     type: Date,
     required: true
   }
@@ -44,5 +50,4 @@ const tradeSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Trade', tradeSchema);
-
+module.exports = mongoose.model('Market', marketSchema); 

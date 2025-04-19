@@ -4,59 +4,34 @@ const axios = require('axios');
 class NobitexService {
   constructor() {
     this.baseURL = 'https://api.nobitex.ir';
-    this.token = process.env.NOBITEX_TOKEN || null;
   }
 
-  async login() {
+  // Get order book (v2 and v3)
+  async getOrderBook(symbol, version = 'v2') {
     try {
-      if (this.token) {
-        return this.token;
-      }
-      
-      const response = await axios.post(`${this.baseURL}/auth/login/`, {
-        username: process.env.NOBITEX_USERNAME,
-        password: process.env.NOBITEX_PASSWORD
-      });
-      this.token = response.data.key;
-      return this.token;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
-  }
-
-  async getOrders() {
-    try {
-      if (!this.token) {
-        await this.login();
-      }
-      
-      const response = await axios.post(`${this.baseURL}/market/orders/list`, {
-        order: '-price',
-        type: 'sell',
-        dstCurrency: 'usdt'
-      }, {
-        headers: { 'Authorization': `Token ${this.token}` }
-      });
+      const response = await axios.get(`${this.baseURL}/${version}/orderbook/${symbol}`);
       return response.data;
     } catch (error) {
-      console.error('Get orders error:', error);
+      console.error('Get order book error:', error);
       throw error;
     }
   }
 
-  async getTrades(srcCurrency = 'btc', dstCurrency = 'rls') {
+  // Get market depth
+  async getDepth(symbol) {
     try {
-      if (!this.token) {
-        await this.login();
-      }
-      
-      const response = await axios.post(`${this.baseURL}/market/trades/list`, {
-        srcCurrency,
-        dstCurrency
-      }, {
-        headers: { 'Authorization': `Token ${this.token}` }
-      });
+      const response = await axios.get(`${this.baseURL}/v2/depth/${symbol}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get depth error:', error);
+      throw error;
+    }
+  }
+
+  // Get recent trades
+  async getTrades(symbol) {
+    try {
+      const response = await axios.get(`${this.baseURL}/v2/trades/${symbol}`);
       return response.data;
     } catch (error) {
       console.error('Get trades error:', error);
@@ -64,21 +39,47 @@ class NobitexService {
     }
   }
 
+  // Get market stats
   async getMarketStats(srcCurrency = 'btc', dstCurrency = 'rls') {
     try {
-      if (!this.token) {
-        await this.login();
-      }
-      
-      const response = await axios.post(`${this.baseURL}/market/stats`, {
-        srcCurrency,
-        dstCurrency
-      }, {
-        headers: { 'Authorization': `Token ${this.token}` }
+      const response = await axios.get(`${this.baseURL}/market/stats`, {
+        params: {
+          srcCurrency,
+          dstCurrency
+        }
       });
       return response.data;
     } catch (error) {
       console.error('Get market stats error:', error);
+      throw error;
+    }
+  }
+
+  // Get UDF history
+  async getUDFHistory(symbol, resolution, from, to) {
+    try {
+      const response = await axios.get(`${this.baseURL}/market/udf/history`, {
+        params: {
+          symbol,
+          resolution,
+          from,
+          to
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Get UDF history error:', error);
+      throw error;
+    }
+  }
+
+  // Get global stats
+  async getGlobalStats() {
+    try {
+      const response = await axios.post(`${this.baseURL}/market/global-stats`);
+      return response.data;
+    } catch (error) {
+      console.error('Get global stats error:', error);
       throw error;
     }
   }
