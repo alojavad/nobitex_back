@@ -4,8 +4,8 @@
   "description": "Nobitex API Integration",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node server.js",
+    "dev": "echo 'No build step required'",
     "test": "jest"
   },
   "keywords": [
@@ -26,5 +26,8 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "nodemon": "^3.0.3"
-  }
+  },
+  "engines": {
+     "node": "18.x"
+   }
 }
