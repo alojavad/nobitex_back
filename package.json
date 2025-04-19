@@ -5,8 +5,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "echo 'No build step required'",
-    "test": "jest"
+    "dev": "nodemon server.js",
+    "test": "jest",
+    "check-db": "node scripts/checkDatabase.js",
+    "seed-db": "node scripts/seedDatabase.js",
+    "monitor-db": "node scripts/monitorDatabase.js"
   },
   "keywords": [
     "nobitex",
