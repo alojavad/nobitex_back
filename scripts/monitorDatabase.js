@@ -1,7 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const OrderBook = require('../models/OrderBook');
-const MarketStats = require('../models/MarketStats');
+const MarketStat = require('../models/MarketStat');
 const UDFHistory = require('../models/UDFHistory');
 const Order = require('../models/Order');
 const Trade = require('../models/Trade');
@@ -35,7 +35,7 @@ async function monitorDatabase() {
       try {
         // بررسی تعداد رکوردها
         const orderBookCount = await OrderBook.countDocuments();
-        const marketStatsCount = await MarketStats.countDocuments();
+        const marketStatsCount = await MarketStat.countDocuments();
         const udfHistoryCount = await UDFHistory.countDocuments();
         const orderCount = await Order.countDocuments();
         const tradeCount = await Trade.countDocuments();
@@ -55,7 +55,7 @@ async function monitorDatabase() {
         const now = new Date().toLocaleTimeString();
         console.log(`\n📊 وضعیت پایگاه داده در ${now}:`);
         console.log(`- سفارشات (OrderBook): ${orderBookCount} رکورد (${orderBookChange >= 0 ? '+' : ''}${orderBookChange})`);
-        console.log(`- آمار بازار (MarketStats): ${marketStatsCount} رکورد (${marketStatsChange >= 0 ? '+' : ''}${marketStatsChange})`);
+        console.log(`- آمار بازار (MarketStat): ${marketStatsCount} رکورد (${marketStatsChange >= 0 ? '+' : ''}${marketStatsChange})`);
         console.log(`- تاریخچه (UDFHistory): ${udfHistoryCount} رکورد (${udfHistoryChange >= 0 ? '+' : ''}${udfHistoryChange})`);
         console.log(`- سفارش‌ها (Order): ${orderCount} رکورد (${orderChange >= 0 ? '+' : ''}${orderChange})`);
         console.log(`- معاملات (Trade): ${tradeCount} رکورد (${tradeChange >= 0 ? '+' : ''}${tradeChange})`);
@@ -67,7 +67,7 @@ async function monitorDatabase() {
           console.log(`⚠️ هشدار: تعداد رکوردهای OrderBook (${orderBookCount}) از حد مجاز (${ALERT_THRESHOLD}) بیشتر است!`);
         }
         if (marketStatsCount > ALERT_THRESHOLD) {
-          console.log(`⚠️ هشدار: تعداد رکوردهای MarketStats (${marketStatsCount}) از حد مجاز (${ALERT_THRESHOLD}) بیشتر است!`);
+          console.log(`⚠️ هشدار: تعداد رکوردهای MarketStat (${marketStatsCount}) از حد مجاز (${ALERT_THRESHOLD}) بیشتر است!`);
         }
         if (udfHistoryCount > ALERT_THRESHOLD) {
           console.log(`⚠️ هشدار: تعداد رکوردهای UDFHistory (${udfHistoryCount}) از حد مجاز (${ALERT_THRESHOLD}) بیشتر است!`);

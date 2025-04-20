@@ -11,8 +11,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// تنظیمات EJS
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/nobitex', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   retryWrites: true,
@@ -34,23 +41,27 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Welcome to Nobitex API',
-    endpoints: {
-      health: '/health',
-      orders: '/api/orders',
-      trades: '/api/trades',
-      marketStats: '/api/market-stats'
-    }
-  });
+// Root endpoint - render index.ejs
+app.get('/', async (req, res) => {
+  try {
+    // می‌توانید داده‌های مورد نیاز برای صفحه را اینجا آماده کنید
+    const data = {
+      title: 'Nobitex API Dashboard',
+      description: 'مانیتورینگ و مدیریت API های نوبیتکس',
+      endpoints: {
+        health: '/health',
+        orders: '/api/orders',
+        trades: '/api/trades',
+        marketStats: '/api/market-stats'
+      }
+    };
+    
+    res.render('index', data);
+  } catch (error) {
+    console.error('Error rendering index page:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
-
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'public')));
-}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

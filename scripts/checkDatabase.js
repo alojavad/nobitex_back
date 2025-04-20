@@ -1,57 +1,98 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const OrderBook = require('../models/OrderBook');
-const MarketStats = require('../models/MarketStats');
-const UDFHistory = require('../models/UDFHistory');
-const Order = require('../models/Order');
 const Trade = require('../models/Trade');
-const Market = require('../models/Market');
-const User = require('../models/User');
+const MarketStat = require('../models/MarketStat');
+const UDFHistory = require('../models/UDFHistory');
 
 async function checkDatabase() {
   try {
-    // اتصال به پایگاه داده
+    // اتصال به دیتابیس
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ اتصال به پایگاه داده برقرار شد');
+    console.log('✅ اتصال به دیتابیس برقرار شد\n');
 
-    // بررسی تعداد رکوردها در هر مدل
+    // بررسی OrderBook
+    console.log('📊 بررسی داده‌های OrderBook:');
     const orderBookCount = await OrderBook.countDocuments();
-    const marketStatsCount = await MarketStats.countDocuments();
-    const udfHistoryCount = await UDFHistory.countDocuments();
-    const orderCount = await Order.countDocuments();
+    const latestOrderBook = await OrderBook.findOne().sort({ lastUpdate: -1 });
+    console.log(`تعداد کل رکوردها: ${orderBookCount}`);
+    if (latestOrderBook) {
+      console.log('آخرین به‌روزرسانی:', new Date(latestOrderBook.lastUpdate).toLocaleString('fa-IR'));
+      console.log('نماد:', latestOrderBook.symbol);
+      console.log('تعداد سفارش‌های خرید:', latestOrderBook.bids.length);
+      console.log('تعداد سفارش‌های فروش:', latestOrderBook.asks.length);
+      console.log('آخرین قیمت معامله:', latestOrderBook.lastTradePrice);
+    }
+
+    // بررسی Trade
+    console.log('\n📈 بررسی داده‌های Trade:');
     const tradeCount = await Trade.countDocuments();
-    const marketCount = await Market.countDocuments();
-    const userCount = await User.countDocuments();
-
-    console.log('\n📊 آمار داده‌های موجود در پایگاه داده:');
-    console.log(`- سفارشات (OrderBook): ${orderBookCount} رکورد`);
-    console.log(`- آمار بازار (MarketStats): ${marketStatsCount} رکورد`);
-    console.log(`- تاریخچه (UDFHistory): ${udfHistoryCount} رکورد`);
-    console.log(`- سفارش‌ها (Order): ${orderCount} رکورد`);
-    console.log(`- معاملات (Trade): ${tradeCount} رکورد`);
-    console.log(`- بازارها (Market): ${marketCount} رکورد`);
-    console.log(`- کاربران (User): ${userCount} رکورد`);
-
-    // نمایش نمونه‌ای از داده‌ها
-    if (orderBookCount > 0) {
-      const sampleOrderBook = await OrderBook.findOne();
-      console.log('\n📝 نمونه‌ای از داده‌های OrderBook:');
-      console.log(JSON.stringify(sampleOrderBook, null, 2));
+    const latestTrade = await Trade.findOne().sort({ time: -1 });
+    console.log(`تعداد کل رکوردها: ${tradeCount}`);
+    if (latestTrade) {
+      console.log('آخرین معامله:', new Date(latestTrade.time).toLocaleString('fa-IR'));
+      console.log('نماد:', latestTrade.symbol);
+      console.log('قیمت:', latestTrade.price);
+      console.log('حجم:', latestTrade.volume);
+      console.log('نوع:', latestTrade.type);
     }
 
-    if (marketStatsCount > 0) {
-      const sampleMarketStats = await MarketStats.findOne();
-      console.log('\n📝 نمونه‌ای از داده‌های MarketStats:');
-      console.log(JSON.stringify(sampleMarketStats, null, 2));
+    // بررسی MarketStat
+    console.log('\n📉 بررسی داده‌های MarketStat:');
+    const marketStatCount = await MarketStat.countDocuments();
+    const latestMarketStat = await MarketStat.findOne().sort({ _id: -1 });
+    console.log(`تعداد کل رکوردها: ${marketStatCount}`);
+    if (latestMarketStat) {
+      console.log('نماد:', latestMarketStat.symbol);
+      console.log('وضعیت بازار:', latestMarketStat.isClosed ? 'بسته' : 'باز');
+      console.log('بهترین قیمت فروش:', latestMarketStat.bestSell);
+      console.log('بهترین قیمت خرید:', latestMarketStat.bestBuy);
+      console.log('حجم معاملات (ارز مبدا):', latestMarketStat.volumeSrc);
+      console.log('حجم معاملات (ارز مقصد):', latestMarketStat.volumeDst);
+      console.log('آخرین قیمت:', latestMarketStat.latest);
+      console.log('تغییرات روزانه:', latestMarketStat.dayChange + '%');
     }
 
-    // بستن اتصال
-    await mongoose.disconnect();
-    console.log('\n✅ اتصال به پایگاه داده بسته شد');
+    // بررسی UDFHistory
+    console.log('\n📊 بررسی داده‌های UDFHistory:');
+    const udfHistoryCount = await UDFHistory.countDocuments();
+    const latestUDFHistory = await UDFHistory.findOne().sort({ to: -1 });
+    console.log(`تعداد کل رکوردها: ${udfHistoryCount}`);
+    if (latestUDFHistory) {
+      console.log('نماد:', latestUDFHistory.symbol);
+      console.log('رزولوشن:', latestUDFHistory.resolution);
+      console.log('از تاریخ:', new Date(latestUDFHistory.from).toLocaleString('fa-IR'));
+      console.log('تا تاریخ:', new Date(latestUDFHistory.to).toLocaleString('fa-IR'));
+      console.log('تعداد کندل‌ها:', latestUDFHistory.timestamps.length);
+      
+      // محاسبه میانگین قیمت‌ها
+      const avgOpen = latestUDFHistory.open.reduce((a, b) => a + b, 0) / latestUDFHistory.open.length;
+      const avgHigh = latestUDFHistory.high.reduce((a, b) => a + b, 0) / latestUDFHistory.high.length;
+      const avgLow = latestUDFHistory.low.reduce((a, b) => a + b, 0) / latestUDFHistory.low.length;
+      const avgClose = latestUDFHistory.close.reduce((a, b) => a + b, 0) / latestUDFHistory.close.length;
+      const avgVolume = latestUDFHistory.volume.reduce((a, b) => a + b, 0) / latestUDFHistory.volume.length;
+
+      console.log('میانگین قیمت باز شدن:', avgOpen.toLocaleString('fa-IR'));
+      console.log('میانگین قیمت بالا:', avgHigh.toLocaleString('fa-IR'));
+      console.log('میانگین قیمت پایین:', avgLow.toLocaleString('fa-IR'));
+      console.log('میانگین قیمت بسته شدن:', avgClose.toLocaleString('fa-IR'));
+      console.log('میانگین حجم:', avgVolume.toLocaleString('fa-IR'));
+    }
+
+    // آمار کلی
+    console.log('\n📈 آمار کلی:');
+    console.log(`تعداد کل رکوردهای OrderBook: ${orderBookCount}`);
+    console.log(`تعداد کل رکوردهای Trade: ${tradeCount}`);
+    console.log(`تعداد کل رکوردهای MarketStat: ${marketStatCount}`);
+    console.log(`تعداد کل رکوردهای UDFHistory: ${udfHistoryCount}`);
+    console.log(`مجموع کل رکوردها: ${orderBookCount + tradeCount + marketStatCount + udfHistoryCount}`);
+
   } catch (error) {
-    console.error('❌ خطا در بررسی پایگاه داده:', error);
+    console.error('❌ خطا در بررسی دیتابیس:', error);
+  } finally {
+    await mongoose.disconnect();
+    console.log('\n🔌 اتصال به دیتابیس قطع شد');
   }
 }
 
-// اجرای تابع
 checkDatabase(); 

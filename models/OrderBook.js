@@ -3,8 +3,18 @@ const mongoose = require('mongoose');
 const orderBookSchema = new mongoose.Schema({
   symbol: {
     type: String,
-    required: true,
-    unique: true
+    required: true
+  },
+  version: {
+    type: String,
+    default: 'v2'
+  },
+  lastUpdate: {
+    type: Date,
+    required: true
+  },
+  lastTradePrice: {
+    type: Number
   },
   bids: [{
     price: {
@@ -13,10 +23,6 @@ const orderBookSchema = new mongoose.Schema({
     },
     amount: {
       type: Number,
-      required: true
-    },
-    orderId: {
-      type: String,
       required: true
     }
   }],
@@ -28,16 +34,8 @@ const orderBookSchema = new mongoose.Schema({
     amount: {
       type: Number,
       required: true
-    },
-    orderId: {
-      type: String,
-      required: true
     }
-  }],
-  lastUpdate: {
-    type: Date,
-    required: true
-  }
+  }]
 }, {
   timestamps: true
 });

@@ -1,43 +1,26 @@
 // routes/nobitexRoutes.js
 const express = require('express');
 const router = express.Router();
-const nobitexService = require('../services/nobitexService');
-const Order = require('../models/Order');
-const Trade = require('../models/Trade');
-const MarketStat = require('../models/MarketStat');
-const mongoose = require('mongoose');
+const marketController = require('../controllers/marketController');
 
-// Get and save orders
-router.get('/orders', async (req, res) => {
-  try {
-    const orders = await nobitexService.getOrders();
-    await Order.insertMany(orders.orders);
-    res.json(orders);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// ===== API‌های عمومی بازار =====
 
-// Get and save trades
-router.get('/trades', async (req, res) => {
-  try {
-    const trades = await nobitexService.getTrades();
-    await Trade.insertMany(trades.trades);
-    res.json(trades);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// دریافت لیست سفارش‌ها
+router.get('/orderbook/:symbol', marketController.getOrderBook);
 
-// Get and save market stats
-router.get('/market-stats', async (req, res) => {
-  try {
-    const stats = await nobitexService.getMarketStats();
-    await MarketStat.create(stats.stats);
-    res.json(stats);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// دریافت نمودار عمق
+router.get('/depth/:symbol', marketController.getDepth);
+
+// دریافت لیست معاملات
+router.get('/trades/:symbol', marketController.getTrades);
+
+// دریافت آمار بازار
+router.get('/market/stats', marketController.getMarketStats);
+
+// دریافت آمار OHLC بازار
+router.get('/udf/history', marketController.getUDFHistory);
+
+// دریافت آمار بازار جهانی
+router.get('/global/stats', marketController.getGlobalStats);
 
 module.exports = router;

@@ -2,42 +2,25 @@
 const mongoose = require('mongoose');
 
 const tradeSchema = new mongoose.Schema({
-  id: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  orderId: {
-    type: String,
-    required: true
-  },
   symbol: {
     type: String,
     required: true
   },
-  type: {
-    type: String,
-    enum: ['buy', 'sell'],
+  time: {
+    type: Date,
     required: true
   },
   price: {
     type: Number,
     required: true
   },
-  amount: {
+  volume: {
     type: Number,
     required: true
   },
-  fee: {
-    type: Number,
-    required: true
-  },
-  feeCurrency: {
+  type: {
     type: String,
-    required: true
-  },
-  createdAt: {
-    type: Date,
+    enum: ['buy', 'sell'],
     required: true
   }
 }, {

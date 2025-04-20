@@ -2,7 +2,7 @@
 const nobitexService = require('../services/nobitexService');
 const Order = require('../models/Order');
 const Trade = require('../models/Trade');
-const MarketStats = require('../models/MarketStats');
+const MarketStat = require('../models/MarketStat');
 
 async function fetchAndSaveData() {
   try {
@@ -19,7 +19,7 @@ async function fetchAndSaveData() {
 
     // Fetch and save market stats
     const stats = await nobitexService.getMarketStats();
-    await MarketStats.create(stats.stats);
+    await MarketStat.create(stats.stats);
 
     console.log('Data fetched and saved successfully');
   } catch (error) {
