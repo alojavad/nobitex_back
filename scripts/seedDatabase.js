@@ -1,85 +1,93 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
+const Agenda = require('agenda');
+const nobitexService = require('../services/nobitexService');
 const OrderBook = require('../models/OrderBook');
 const MarketStat = require('../models/MarketStat');
-const UDFHistory = require('../models/UDFHistory');
 const Trade = require('../models/Trade');
-const NobitexService = require('../services/nobitexService');
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/nobitex';
+// تنظیمات اولیه
+const FETCH_INTERVAL = '30 seconds';
+const SYMBOLS = ['BTCIRT', 'ETHIRT', 'LTCIRT', 'XRPIRT', 'DOGEIRT'];
 
-const nobitexService = new NobitexService();
+// اتصال به دیتابیس
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
-// تابع تاخیر
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+// تنظیمات Agenda
+const agenda = new Agenda({
+  db: {
+    address: process.env.MONGODB_URI,
+    collection: 'nobitexJobs'
+  },
+  processEvery: '10 seconds'
+});
 
-async function fetchAndSaveData() {
+// تعریف وظایف
+agenda.define('fetch market data', async (job) => {
+  const { symbol } = job.attrs.data;
   try {
-    // دریافت و ذخیره‌سازی دفتر سفارشات
-    const orderBookData = await nobitexService.getOrderBook('BTCIRT');
-    if (orderBookData) {
-      await OrderBook.findOneAndUpdate(
-        { symbol: 'BTCIRT' },
-        orderBookData,
-        { upsert: true, new: true }
-      );
-      console.log(new Date().toISOString(), '- OrderBook data saved successfully');
+    console.log(`[${new Date().toISOString()}] Fetching data for ${symbol}...`);
+    
+    // دریافت Order Book
+    const orderBook = await nobitexService.getOrderBook(symbol);
+    if (orderBook) {
+      await OrderBook.create({
+        symbol,
+        bids: orderBook.bids,
+        asks: orderBook.asks,
+        timestamp: new Date()
+      });
+      console.log(`[${new Date().toISOString()}] Saved order book for ${symbol}`);
     }
 
-    // دریافت و ذخیره‌سازی معاملات
-    const tradesData = await nobitexService.getTrades('BTCIRT');
-    if (tradesData && tradesData.length > 0) {
-      for (const trade of tradesData) {
-        await Trade.findOneAndUpdate(
-          { 
-            symbol: 'BTCIRT',
-            time: trade.time,
-            price: trade.price,
-            volume: trade.volume,
-            type: trade.type
-          },
-          trade,
-          { upsert: true, new: true }
-        );
-      }
-      console.log(new Date().toISOString(), '- Trades data saved successfully');
-    }
-
-    // دریافت و ذخیره‌سازی آمار بازار
-    const marketStats = await nobitexService.getMarketStats();
-    if (marketStats) {
-      await MarketStat.findOneAndUpdate(
-        { symbol: 'BTCIRT' },
-        marketStats,
-        { upsert: true, new: true }
-      );
-      console.log(new Date().toISOString(), '- Market stats saved successfully');
+    // دریافت Trades
+    const trades = await nobitexService.getTrades(symbol);
+    if (trades && trades.length > 0) {
+      await Trade.insertMany(trades.map(trade => ({
+        symbol,
+        price: trade.price,
+        volume: trade.volume,
+        type: trade.type,
+        time: new Date(trade.time)
+      })));
+      console.log(`[${new Date().toISOString()}] Saved ${trades.length} trades for ${symbol}`);
     }
 
   } catch (error) {
-    console.error(new Date().toISOString(), '- Error fetching data:', error);
+    console.error(`[${new Date().toISOString()}] Error fetching data for ${symbol}:`, error.message);
   }
-}
+});
 
-async function startPeriodicFetch() {
+agenda.define('fetch market stats', async () => {
   try {
-    await mongoose.connect(MONGODB_URI);
-    console.log('Connected to MongoDB');
-
-    // حلقه بی‌نهایت برای دریافت داده‌ها هر 30 ثانیه
-    while (true) {
-      await fetchAndSaveData();
-      console.log(new Date().toISOString(), '- Waiting 30 seconds for next fetch...');
-      await delay(30000); // تاخیر 30 ثانیه
+    console.log(`[${new Date().toISOString()}] Fetching market stats...`);
+    const stats = await nobitexService.getMarketStats();
+    if (stats) {
+      await MarketStat.create({
+        ...stats,
+        timestamp: new Date()
+      });
+      console.log(`[${new Date().toISOString()}] Saved market stats`);
     }
   } catch (error) {
-    console.error('Error in periodic fetch:', error);
-  } finally {
-    await mongoose.disconnect();
-    console.log('Disconnected from MongoDB');
+    console.error(`[${new Date().toISOString()}] Error fetching market stats:`, error.message);
   }
-}
+});
 
-// شروع دریافت دوره‌ای داده‌ها
-console.log('Starting periodic data fetch every 30 seconds...');
-startPeriodicFetch(); 
+// شروع Agenda
+(async function() {
+  await agenda.start();
+  
+  // زمان‌بندی وظایف
+  SYMBOLS.forEach(symbol => {
+    agenda.every(FETCH_INTERVAL, 'fetch market data', { symbol });
+  });
+  
+  agenda.every(FETCH_INTERVAL, 'fetch market stats');
+  
+  console.log('Agenda started. Jobs scheduled:');
+  console.log(`- Fetch market data every ${FETCH_INTERVAL} for symbols: ${SYMBOLS.join(', ')}`);
+  console.log(`- Fetch market stats every ${FETCH_INTERVAL}`);
+}); 

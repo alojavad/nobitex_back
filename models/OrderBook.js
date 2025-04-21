@@ -11,7 +11,7 @@ const orderBookSchema = new mongoose.Schema({
   },
   lastUpdate: {
     type: Date,
-    required: true
+    default: Date.now
   },
   lastTradePrice: {
     type: Number
@@ -39,5 +39,8 @@ const orderBookSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// ایندکس برای جستجوی سریع
+orderBookSchema.index({ symbol: 1, lastUpdate: -1 });
 
 module.exports = mongoose.model('OrderBook', orderBookSchema); 

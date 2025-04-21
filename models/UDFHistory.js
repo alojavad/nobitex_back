@@ -17,34 +17,35 @@ const udfHistorySchema = new mongoose.Schema({
     type: Date,
     required: true
   },
-  data: [{
-    time: {
-      type: Date,
-      required: true
-    },
-    open: {
-      type: Number,
-      required: true
-    },
-    high: {
-      type: Number,
-      required: true
-    },
-    low: {
-      type: Number,
-      required: true
-    },
-    close: {
-      type: Number,
-      required: true
-    },
-    volume: {
-      type: Number,
-      required: true
-    }
+  timestamps: [{
+    type: Date,
+    required: true
+  }],
+  open: [{
+    type: Number,
+    required: true
+  }],
+  high: [{
+    type: Number,
+    required: true
+  }],
+  low: [{
+    type: Number,
+    required: true
+  }],
+  close: [{
+    type: Number,
+    required: true
+  }],
+  volume: [{
+    type: Number,
+    required: true
   }]
 }, {
   timestamps: true
 });
+
+// ایندکس برای جستجوی سریع
+udfHistorySchema.index({ symbol: 1, resolution: 1, from: -1, to: -1 });
 
 module.exports = mongoose.model('UDFHistory', udfHistorySchema); 

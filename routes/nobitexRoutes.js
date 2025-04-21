@@ -8,12 +8,6 @@ const marketController = require('../controllers/marketController');
 // دریافت لیست سفارش‌ها
 router.get('/orderbook/:symbol', marketController.getOrderBook);
 
-// دریافت نمودار عمق
-router.get('/depth/:symbol', marketController.getDepth);
-
-// دریافت لیست معاملات
-router.get('/trades/:symbol', marketController.getTrades);
-
 // دریافت آمار بازار
 router.get('/market/stats', marketController.getMarketStats);
 

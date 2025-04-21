@@ -5,6 +5,9 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+// وارد کردن سرویس زمان‌بندی
+const schedulerService = require('./services/schedulerService');
+
 const app = express();
 
 // Middleware
@@ -19,13 +22,14 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/nobitex', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  retryWrites: true,
-  w: 'majority'
-})
-  .then(() => console.log('Connected to MongoDB'))
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('Connected to MongoDB');
+    // شروع زمان‌بندی پس از اتصال به دیتابیس
+    schedulerService.startScheduler()
+      .then(() => console.log('Scheduler started successfully'))
+      .catch(err => console.error('Error starting scheduler:', err));
+  })
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Routes
@@ -64,6 +68,25 @@ app.get('/', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// مدیریت خاموش شدن سرور
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  schedulerService.stopScheduler()
+    .then(() => {
+      server.close(() => {
+        console.log('HTTP server closed');
+        mongoose.connection.close(false, () => {
+          console.log('MongoDB connection closed');
+          process.exit(0);
+        });
+      });
+    })
+    .catch(err => {
+      console.error('Error stopping scheduler:', err);
+      process.exit(1);
+    });
 });

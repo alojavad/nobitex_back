@@ -24,8 +24,11 @@ const tradeSchema = new mongoose.Schema({
     required: true
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  _id: true
 });
+
+tradeSchema.index({ symbol: 1, time: 1, price: 1, volume: 1, type: 1 }, { unique: true });
 
 module.exports = mongoose.model('Trade', tradeSchema);
 
