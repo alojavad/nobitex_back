@@ -81,8 +81,16 @@ agenda.define('fetch market data', async (job) => {
 
     // Fetch Trades V2  
     if (requestCounters.trades < REQUEST_LIMITS.trades) {  
-      const trades = await nobitexService.getTrades(symbol);  
-      await Trade.create({ symbol, data: trades });  
+      const trades = await nobitexService.getTrades(symbol);
+      if (trades && trades.trades && trades.trades.length > 0) {
+        await Trade.insertMany(trades.trades.map(trade => ({
+          symbol,
+          time: new Date(parseInt(trade.time)),
+          price: parseFloat(trade.price),
+          volume: parseFloat(trade.volume),
+          type: trade.type
+        })));
+      }
       requestCounters.trades++;  
     }  
 
