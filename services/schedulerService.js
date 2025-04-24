@@ -84,7 +84,7 @@ agenda.define('fetch market data', async (job) => {
       const trades = await nobitexService.getTrades(symbol);
       if (trades && trades.trades && trades.trades.length > 0) {
         const validTrades = trades.trades.filter(trade => {
-          const tradeTime = new Date(parseInt(trade.time));
+          const tradeTime = new Date(trade.time); // Directly use the ISO 8601 string
           if (isNaN(tradeTime.valueOf())) {
             console.warn(`Invalid timestamp for trade: ${JSON.stringify(trade)}`);
             return false; // Skip invalid trades
@@ -95,7 +95,7 @@ agenda.define('fetch market data', async (job) => {
         await Trade.insertMany(
           validTrades.map(trade => ({
             symbol,
-            time: new Date(parseInt(trade.time)),
+            time: new Date(trade.time), // Use the ISO 8601 string directly
             price: parseFloat(trade.price),
             volume: parseFloat(trade.volume),
             type: trade.type,
@@ -107,9 +107,22 @@ agenda.define('fetch market data', async (job) => {
 
     // Fetch Market Stats  
     if (requestCounters.marketStats < REQUEST_LIMITS.marketStats) {  
-      const marketStats = await nobitexService.getMarketStats(symbol.split('IRT')[0].toLowerCase(), 'rls');  
-      await MarketStat.create({ symbol, data: marketStats });  
-      requestCounters.marketStats++;  
+      const marketStats = await nobitexService.getMarketStats(symbol.split('IRT')[0].toLowerCase(), 'rls');
+      
+      // Validate required fields
+      const requiredFields = [
+        'dayChange', 'dayClose', 'dayOpen', 'dayHigh', 'dayLow',
+        'mark', 'latest', 'volumeDst', 'volumeSrc', 'bestBuy', 'bestSell'
+      ];
+      const isValid = requiredFields.every(field => marketStats[field] !== undefined);
+
+      if (!isValid) {
+        console.warn(`Invalid market stats data for ${symbol}:`, marketStats);
+        return; // Skip saving invalid data
+      }
+
+      await MarketStat.create({ symbol, data: marketStats });
+      requestCounters.marketStats++;
     }  
 
     // Fetch Historical Data (example: last 24 hours)  
