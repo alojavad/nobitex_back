@@ -80,30 +80,45 @@ agenda.define('fetch market data', async (job) => {
     }  
 
     // Fetch Trades V2  
-    if (requestCounters.trades < REQUEST_LIMITS.trades) {  
-      const trades = await nobitexService.getTrades(symbol);
-      if (trades && trades.trades && trades.trades.length > 0) {
-        const validTrades = trades.trades.filter(trade => {
-          const tradeTime = new Date(trade.time); // Directly use the ISO 8601 string
-          if (isNaN(tradeTime.valueOf())) {
-            console.warn(`Invalid timestamp for trade: ${JSON.stringify(trade)}`);
-            return false; // Skip invalid trades
-          }
-          return true;
-        });
-
-        await Trade.insertMany(
-          validTrades.map(trade => ({
-            symbol,
-            time: new Date(trade.time), // Use the ISO 8601 string directly
-            price: parseFloat(trade.price),
-            volume: parseFloat(trade.volume),
-            type: trade.type,
-          }))
-        );
+if (requestCounters.trades < REQUEST_LIMITS.trades) {  
+  const trades = await nobitexService.getTrades(symbol);
+  if (trades && trades.trades && trades.trades.length > 0) {
+    const validTrades = trades.trades.filter(trade => {
+      const tradeTime = new Date(trade.time); // Directly use the ISO 8601 string
+      if (isNaN(tradeTime.valueOf())) {
+        console.warn(`Invalid timestamp for trade: ${JSON.stringify(trade)}`);
+        return false; // Skip invalid trades
       }
-      requestCounters.trades++;  
-    }  
+      return true;
+    });
+
+    for (const trade of validTrades) {
+      // Check if trade already exists in the database
+      const existingTrade = await Trade.findOne({
+        symbol: trade.symbol,
+        time: new Date(trade.time),
+        price: parseFloat(trade.price),
+        volume: parseFloat(trade.volume),
+        type: trade.type
+      });
+
+      if (!existingTrade) {
+        // Insert the new trade only if it doesn't exist
+        await Trade.create({
+          symbol: trade.symbol,
+          time: new Date(trade.time),
+          price: parseFloat(trade.price),
+          volume: parseFloat(trade.volume),
+          type: trade.type,
+        });
+      } else {
+        console.log(`Trade already exists: ${JSON.stringify(trade)}`);
+      }
+    }
+  }
+
+  requestCounters.trades++;  
+}
 
     // Fetch Market Stats  
     if (requestCounters.marketStats < REQUEST_LIMITS.marketStats) {  
