@@ -28,7 +28,7 @@ class NobitexService {
   // ===== API‌های عمومی بازار =====
 
   // دریافت لیست سفارش‌ها (Order Book)
-  async getOrderBook(symbol = 'BTCIRT', version = 'v2') {
+  async getOrderBook(symbol = 'all', version = 'v3') {
     try {
       const response = await axios.get(`${this.baseURL}/${version}/orderbook/${symbol}`);
       return {
@@ -63,6 +63,7 @@ class NobitexService {
   async getTrades(symbol = 'BTCIRT') {
     try {
       const response = await axios.get(`${this.baseURL}/v2/trades/${symbol}`);
+      console.log(`${this.baseURL}/v2/trades/${symbol}`);
       return {
         status: response.data.status,
         trades: response.data.trades.map(trade => ({
@@ -106,16 +107,6 @@ class NobitexService {
       return response.data;
     } catch (error) {
       throw new Error(`Failed to fetch UDF history: ${error.message}`);
-    }
-  }
-
-  // دریافت آمار بازار جهانی (Global Stats)
-  async getGlobalStats() {
-    try {
-      const response = await axios.post(`${this.baseURL}/market/global-stats`);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to fetch global stats: ${error.message}`);
     }
   }
 }

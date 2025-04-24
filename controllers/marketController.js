@@ -10,7 +10,7 @@ const UDFHistory = require('../models/UDFHistory');
 exports.getOrderBook = async (req, res) => {
   try {
     const { symbol } = req.params;
-    const { version = 'v2' } = req.query;
+    const { version = 'v3' } = req.query;
     const orderbook = await nobitexService.getOrderBook(symbol, version);
     await OrderBook.create({
       symbol,

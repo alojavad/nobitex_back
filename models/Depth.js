@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const orderBookSchema = new mongoose.Schema({
+const depthSchema = new mongoose.Schema({
   symbol: {
     type: String,
     required: true
@@ -37,6 +37,6 @@ const orderBookSchema = new mongoose.Schema({
 });
 
 // ایندکس برای جستجوی سریع
-orderBookSchema.index({ symbol: 1, lastUpdate: -1 });
+depthSchema.index({ symbol: 1, lastUpdate: -1 });
 
-module.exports = mongoose.model('OrderBook', orderBookSchema); 
+module.exports = mongoose.model('Depth', depthSchema); 

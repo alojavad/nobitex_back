@@ -3,10 +3,14 @@ const nobitexService = require('./nobitexService');
 const OrderBook = require('../models/OrderBook');
 const MarketStat = require('../models/MarketStat');
 const Trade = require('../models/Trade');
+const Depth = require('../models/Depth');
+const UDFHistory = require('../models/UDFHistory');
+
 
 // تنظیمات اولیه
 const FETCH_INTERVAL = '30 seconds';
-const SYMBOLS = ['BTCIRT', 'ETHIRT', 'LTCIRT', 'XRPIRT', 'DOGEIRT'];
+const SYMBOLS = [
+'BTCIRT', 'ETHIRT', 'LTCIRT', 'USDTIRT', 'XRPIRT', 'BCHIRT', 'BNBIRT'];
 
 // تنظیمات Agenda
 const agenda = new Agenda({
@@ -22,89 +26,43 @@ agenda.define('fetch market data', async (job) => {
   const { symbol } = job.attrs.data;
   try {
     console.log(`[${new Date().toISOString()}] Fetching data for ${symbol}...`);
-    
-    // دریافت Order Book
-    const orderBookData = await nobitexService.getOrderBook(symbol);
-    if (orderBookData && orderBookData.status === 'ok') {
-      await OrderBook.findOneAndUpdate(
-        { symbol },
-        {
-          symbol,
-          bids: orderBookData.bids,
-          asks: orderBookData.asks,
-          lastTradePrice: orderBookData.lastTradePrice,
-          lastUpdate: new Date(orderBookData.lastUpdate)
-        },
-        { upsert: true, new: true }
-      );
-      console.log(`[${new Date().toISOString()}] Saved order book for ${symbol}`);
-    }
 
-    // دریافت Trades
-    const tradesData = await nobitexService.getTrades(symbol);
-    if (tradesData && tradesData.status === 'ok' && tradesData.trades && tradesData.trades.length > 0) {
-      // ذخیره هر معامله به صورت جداگانه با استفاده از findOneAndUpdate
-      for (const trade of tradesData.trades) {
-        const tradeDoc = {
-          symbol,
-          price: parseFloat(trade.price),
-          volume: parseFloat(trade.volume),
-          type: trade.type,
-          time: new Date(trade.time)
-        };
+    // Fetch OrderBook V3
+    const orderBookV3 = await nobitexService.getOrderBook(symbol);
+    await OrderBook.create({ symbol, type: 'v3', data: orderBookV3 });
 
-        await Trade.findOneAndUpdate(
-          {
-            symbol: tradeDoc.symbol,
-            time: tradeDoc.time,
-            price: tradeDoc.price,
-            volume: tradeDoc.volume,
-            type: tradeDoc.type
-          },
-          tradeDoc,
-          { upsert: true, new: true }
-        );
-      }
-      console.log(`[${new Date().toISOString()}] Saved ${tradesData.trades.length} trades for ${symbol}`);
-    }
+    // Fetch Depth
+    const depth = await nobitexService.getDepth(symbol);
+    await OrderBook.create({ symbol, type: 'depth', data: depth });
 
+    // Fetch Trades V2
+    const trades = await nobitexService.getTrades(symbol);
+    await Trade.create({ symbol, data: trades });
+
+    // Fetch Market Stats
+    const marketStats = await nobitexService.getMarketStats(symbol.split('IRT')[0].toLowerCase(), 'rls');
+    await MarketStat.create({ symbol, data: marketStats });
+
+    // Fetch Historical Data (example: last 24 hours)
+    const now = Math.floor(Date.now() / 1000);
+    const oneDayAgo = now - 24 * 60 * 60;
+    const UDFHistoryData = await nobitexService.getUDFHistory(symbol, 'D', oneDayAgo, now);
+    await UDFHistory.create({ symbol, data: UDFHistoryData });
+
+    console.log(`[${new Date().toISOString()}] Data fetched and saved for ${symbol}.`);
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error fetching data for ${symbol}:`, error.message);
+    console.error(`[${new Date().toISOString()}] Error fetching data for ${symbol}:`, error);
   }
 });
 
-agenda.define('fetch market stats', async () => {
-  try {
-    console.log(`[${new Date().toISOString()}] Fetching market stats...`);
-    const statsData = await nobitexService.getMarketStats();
-    if (statsData && statsData.status === 'ok' && statsData.stats) {
-      for (const [symbol, stats] of Object.entries(statsData.stats)) {
-        await MarketStat.findOneAndUpdate(
-          { symbol },
-          {
-            symbol,
-            isClosed: stats.isClosed,
-            bestSell: parseFloat(stats.bestSell),
-            bestBuy: parseFloat(stats.bestBuy),
-            volumeSrc: parseFloat(stats.volumeSrc),
-            volumeDst: parseFloat(stats.volumeDst),
-            latest: parseFloat(stats.latest),
-            mark: parseFloat(stats.mark),
-            dayLow: parseFloat(stats.dayLow),
-            dayHigh: parseFloat(stats.dayHigh),
-            dayOpen: parseFloat(stats.dayOpen),
-            dayClose: parseFloat(stats.dayClose),
-            dayChange: parseFloat(stats.dayChange)
-          },
-          { upsert: true, new: true }
-        );
-      }
-      console.log(`[${new Date().toISOString()}] Saved market stats`);
-    }
-  } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error fetching market stats:`, error.message);
-  }
+// ایجاد وظایف برای هر نماد
+SYMBOLS.forEach((symbol) => {
+  agenda.define(`fetch data for ${symbol}`, async (job) => {
+    await agenda.now('fetch market data', { symbol });
+  });
 });
+
+
 
 // تابع شروع زمان‌بندی
 async function startScheduler() {
@@ -131,4 +89,4 @@ async function stopScheduler() {
 module.exports = {
   startScheduler,
   stopScheduler
-}; 
+};

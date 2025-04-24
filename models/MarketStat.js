@@ -65,6 +65,4 @@ const marketStatSchema = new mongoose.Schema({
 // ایندکس‌های مورد نیاز
 marketStatSchema.index({ symbol: 1, lastUpdate: -1 });
 
-const MarketStat = mongoose.model('MarketStat', marketStatSchema);
-
-module.exports = MarketStat; 
+module.exports = mongoose.model('MarketStat', marketStatSchema);
