@@ -93,29 +93,7 @@ async getMarketStats(srcCurrency = 'btc', dstCurrency = 'rls') {
               dstCurrency  
           }  
       });  
-
-      // Extracting the relevant data from the response  
-      const stats = response.data.stats[`${srcCurrency}-${dstCurrency}`];  
-
-      // Map the response to the model format  
-      const marketStat = {  
-          symbol: `${srcCurrency}-${dstCurrency}`,  
-          isClosed: stats.isClosed,  
-          bestSell: Number(stats.bestSell),  
-          bestBuy: Number(stats.bestBuy),  
-          volumeSrc: Number(stats.volumeSrc),  
-          volumeDst: Number(stats.volumeDst),  
-          latest: Number(stats.latest),  
-          mark: Number(stats.mark),  
-          dayLow: Number(stats.dayLow),  
-          dayHigh: Number(stats.dayHigh),  
-          dayOpen: Number(stats.dayOpen),  
-          dayClose: Number(stats.dayClose),  
-          dayChange: Number(stats.dayChange),  
-          lastUpdate: new Date() // Set to current date  
-      };  
-
-      return marketStat;  
+      return response.data;
   } catch (error) {  
       throw new Error(`Failed to fetch market stats: ${error.message}`);  
   }  
