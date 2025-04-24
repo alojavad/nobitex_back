@@ -8,7 +8,9 @@ const UDFHistory = require('../models/UDFHistory');
 
 // تنظیمات اولیه  
 const FETCH_INTERVAL = '30 seconds';  
-const SYMBOLS = ['btc-rls', 'eth-rls', 'ltc-rls', 'xrp-rls', 'bch-rls', 'bnb-rls'];
+const SYMBOLS = [  
+  'BTCIRT', 'ETHIRT', 'LTCIRT', 'USDTIRT', 'XRPIRT', 'BCHIRT', 'BNBIRT'  
+];  
 
 // API request limits (requests per minute)  
 const REQUEST_LIMITS = {  
@@ -125,19 +127,16 @@ agenda.define('fetch market data', async (job) => {
     // Fetch Market Stats  
     if (requestCounters.marketStats < REQUEST_LIMITS.marketStats) {  
       try {
-        for (const symbol of SYMBOLS) {
-          const [srcCurrency, dstCurrency] = symbol.split('-');
-          const marketStats = await nobitexService.getMarketStats(srcCurrency, dstCurrency);
+        const marketStats = await nobitexService.getMarketStats('btc', 'rls');
 
-          // Use upsert to avoid duplicates
-          await MarketStat.updateOne(
-            { symbol: marketStats.symbol },
-            { $set: marketStats },
-            { upsert: true }
-          );
+        // Use upsert to avoid duplicates
+        await MarketStat.updateOne(
+          { symbol: marketStats.symbol },
+          { $set: marketStats },
+          { upsert: true }
+        );
 
-          console.log(`Market stats updated for ${marketStats.symbol}`);
-        }
+        console.log(`Market stats updated for ${marketStats.symbol}`);
       } catch (error) {
         console.error(`Error fetching market stats:`, error);
       }

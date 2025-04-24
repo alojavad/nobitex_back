@@ -1,6 +1,0 @@
-MONGODB_URI=mongodb+srv://hadjavad701:hlXJ7YyWlhlbpeig@cluster0.qbfttxi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-NOBITEX_USERNAME=hadjavad701
-NOBITEX_PASSWORD=hlXJ7YyWlhlbpeig
-NOBITEX_TOKEN=7a107ab9ed7b6e92816c4c18bfc92ad7ecc96854
-PORT=3000
-NODE_ENV=development
