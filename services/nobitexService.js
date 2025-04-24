@@ -119,33 +119,27 @@ async getMarketStats(srcCurrency = 'btc', dstCurrency = 'rls') {
 }
 
   // دریافت آمار OHLC بازار (UDF History)
-  async getUDFHistory(symbol = 'BTCIRT', resolution = 'D', from, to) {  
-    try {  
-      const response = await axios.get(`${this.baseURL}/market/udf/history`, {  
-        params: {  
-          symbol,  
-          resolution,  
-          from,  
-          to  
-        }  
-      });  
-      
-      // Map response data into a structured format  
-      return {  
-        symbol,  
-        resolution,  
-        from: new Date(from * 1000), // Convert from timestamp to Date  
-        to: new Date(to * 1000), // Convert to timestamp to Date  
-        timestamps: response.data.t.map(ts => new Date(ts * 1000)), // Convert timestamps to Date  
-        open: response.data.o.map(Number), // Convert to Number  
-        high: response.data.h.map(Number), // Convert to Number  
-        low: response.data.l.map(Number), // Convert to Number  
-        close: response.data.c.map(Number), // Convert to Number  
-        volume: response.data.v.map(Number) // Convert to Number  
-      };  
-    } catch (error) {  
-      throw new Error(`Failed to fetch UDF history: ${error.message}`);  
-    }  
+  async getUDFHistory(symbol, resolution, from, to) {
+    try {
+      const response = await axios.get(`${this.baseURL}/market/udf/history`, {
+        params: { symbol, resolution, from, to },
+      });
+
+      if (!response.data || response.data.s !== 'ok') {
+        throw new Error(`Invalid UDF history data for ${symbol}`);
+      }
+
+      return {
+        timestamps: response.data.t,
+        open: response.data.o,
+        high: response.data.h,
+        low: response.data.l,
+        close: response.data.c,
+        volume: response.data.v,
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch UDF history: ${error.message}`);
+    }
   }
 }
 

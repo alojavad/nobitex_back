@@ -148,9 +148,28 @@ agenda.define('fetch market data', async (job) => {
     const now = Math.floor(Date.now() / 1000);  
     const oneDayAgo = now - 24 * 60 * 60;  
     if (requestCounters.udfHistory < REQUEST_LIMITS.udfHistory) {  
-      const UDFHistoryData = await nobitexService.getUDFHistory(symbol, 'D', oneDayAgo, now);  
-      await UDFHistory.create({ symbol, data: UDFHistoryData });  
-      requestCounters.udfHistory++;  
+      try {
+        const resolution = 'D'; // Daily resolution
+        const UDFHistoryData = await nobitexService.getUDFHistory(symbol, resolution, oneDayAgo, now);
+
+        await UDFHistory.create({
+          symbol,
+          resolution,
+          from: oneDayAgo,
+          to: now,
+          timestamps: UDFHistoryData.timestamps,
+          open: UDFHistoryData.open,
+          high: UDFHistoryData.high,
+          low: UDFHistoryData.low,
+          close: UDFHistoryData.close,
+          volume: UDFHistoryData.volume,
+        });
+
+        console.log(`UDF history saved for ${symbol}`);
+        requestCounters.udfHistory++;
+      } catch (error) {
+        console.error(`Error fetching UDF history for ${symbol}:`, error);
+      }
     }  
 
     console.log(`[${new Date().toISOString()}] Data fetched and saved for ${symbol}.`);  
