@@ -14,6 +14,8 @@ const MarketStatSchema = new mongoose.Schema({
   dayOpen: { type: String, required: true },
   dayClose: { type: String, required: true },
   dayChange: { type: String, required: true },
+}, {
+  timestamps: true, // Automatically add createdAt and updatedAt fields
 });
 
 module.exports = mongoose.model('MarketStat', MarketStatSchema);

@@ -91,6 +91,10 @@ async getMarketStats(srcCurrency = 'btc', dstCurrency = 'rls') {
       params: { srcCurrency, dstCurrency },
     });
 
+    if (!response.data || response.data.status !== 'ok') {
+      throw new Error(`Invalid market stats data for ${srcCurrency}-${dstCurrency}`);
+    }
+
     const statsKey = `${srcCurrency}-${dstCurrency}`;
     const stats = response.data.stats[statsKey];
 
