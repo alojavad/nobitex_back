@@ -3,6 +3,7 @@ const OrderBook = require('../models/OrderBook');
 const Trade = require('../models/Trade');
 const MarketStat = require('../models/MarketStat');
 const UDFHistory = require('../models/UDFHistory');
+const Depth =  require('../models/Depth');
 
 // ===== API‌های عمومی بازار =====
 
@@ -11,7 +12,21 @@ exports.getOrderBook = async (req, res) => {
   try {
     const { symbol } = req.params;
     const { version = 'v3' } = req.query;
+
+    // Validate required parameters
+    if (!symbol) {
+      return res.status(400).json({ error: 'Symbol is required' });
+    }
+
+    // Fetch order book data from the service
     const orderbook = await nobitexService.getOrderBook(symbol, version);
+
+    // Validate the response
+    if (!orderbook || !orderbook.asks || !orderbook.bids) {
+      return res.status(500).json({ error: 'Invalid order book data received' });
+    }
+
+    // Save order book to the database
     await OrderBook.create({
       symbol,
       version,
@@ -19,15 +34,17 @@ exports.getOrderBook = async (req, res) => {
       lastTradePrice: parseFloat(orderbook.lastTradePrice),
       asks: orderbook.asks.map(([price, amount]) => ({
         price: parseFloat(price),
-        amount: parseFloat(amount)
+        amount: parseFloat(amount),
       })),
       bids: orderbook.bids.map(([price, amount]) => ({
         price: parseFloat(price),
-        amount: parseFloat(amount)
-      }))
+        amount: parseFloat(amount),
+      })),
     });
+
     res.json(orderbook);
   } catch (error) {
+    console.error('Error in getOrderBook:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -50,9 +67,9 @@ exports.getTrades = async (req, res) => {
     const trades = await nobitexService.getTrades(symbol);
     await Trade.insertMany(trades.trades.map(trade => ({
       symbol,
-      time: new Date(parseInt(trade.time)),
+      time: new Date(parseInt(trade.timestamp)),
       price: parseFloat(trade.price),
-      volume: parseFloat(trade.volume),
+      volume: parseFloat(trade.amount),
       type: trade.type
     })));
     res.json(trades);
@@ -66,9 +83,22 @@ exports.getMarketStats = async (req, res) => {
   try {
     const { srcCurrency = 'btc', dstCurrency = 'rls' } = req.query;
     const stats = await nobitexService.getMarketStats(srcCurrency, dstCurrency);
-    const marketStat = stats.stats[`${srcCurrency}-${dstCurrency}`];
+    
+    // Validate required data
+    if (!stats || !stats.stats) {
+      return res.status(500).json({ error: 'Invalid market stats data received' });
+    }
+
+    const symbol = `${srcCurrency}${dstCurrency}`.toUpperCase();
+    const marketStat = stats.stats[symbol];
+
+    if (!marketStat) {
+      return res.status(404).json({ error: `No stats found for symbol ${symbol}` });
+    }
+
+    // Save market stats to database
     await MarketStat.create({
-      symbol: `${srcCurrency}${dstCurrency}`.toUpperCase(),
+      symbol,
       isClosed: marketStat.isClosed,
       bestSell: parseFloat(marketStat.bestSell),
       bestBuy: parseFloat(marketStat.bestBuy),
@@ -80,10 +110,13 @@ exports.getMarketStats = async (req, res) => {
       dayHigh: parseFloat(marketStat.dayHigh),
       dayOpen: parseFloat(marketStat.dayOpen),
       dayClose: parseFloat(marketStat.dayClose),
-      dayChange: parseFloat(marketStat.dayChange)
+      dayChange: parseFloat(marketStat.dayChange),
+      lastUpdate: new Date()
     });
-    res.json(stats);
+
+    res.json(marketStat);
   } catch (error) {
+    console.error('Error in getMarketStats:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -108,16 +141,6 @@ exports.getUDFHistory = async (req, res) => {
       });
     }
     res.json(history);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// دریافت آمار بازار جهانی
-exports.getGlobalStats = async (req, res) => {
-  try {
-    const stats = await nobitexService.getGlobalStats();
-    res.json(stats);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
