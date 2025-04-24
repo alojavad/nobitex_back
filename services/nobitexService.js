@@ -85,18 +85,37 @@ async getTrades(symbol = 'BTCIRT') {
 }
 
 // دریافت آمار بازار (Market Stats)  
-async getMarketStats(srcCurrency = 'btc', dstCurrency = 'rls') {  
-  try {  
-      const response = await axios.get(`${this.baseURL}/market/stats`, {  
-          params: {  
-              srcCurrency,  
-              dstCurrency  
-          }  
-      });  
-      return response.data;
-  } catch (error) {  
-      throw new Error(`Failed to fetch market stats: ${error.message}`);  
-  }  
+async getMarketStats(srcCurrency = 'btc', dstCurrency = 'rls') {
+  try {
+    const response = await axios.get(`${this.baseURL}/market/stats`, {
+      params: { srcCurrency, dstCurrency },
+    });
+
+    const statsKey = `${srcCurrency}-${dstCurrency}`;
+    const stats = response.data.stats[statsKey];
+
+    if (!stats) {
+      throw new Error(`No stats found for ${statsKey}`);
+    }
+
+    return {
+      symbol: statsKey,
+      isClosed: stats.isClosed,
+      bestSell: stats.bestSell,
+      bestBuy: stats.bestBuy,
+      volumeSrc: stats.volumeSrc,
+      volumeDst: stats.volumeDst,
+      latest: stats.latest,
+      mark: stats.mark,
+      dayLow: stats.dayLow,
+      dayHigh: stats.dayHigh,
+      dayOpen: stats.dayOpen,
+      dayClose: stats.dayClose,
+      dayChange: stats.dayChange,
+    };
+  } catch (error) {
+    throw new Error(`Failed to fetch market stats: ${error.message}`);
+  }
 }
 
   // دریافت آمار OHLC بازار (UDF History)

@@ -126,21 +126,21 @@ agenda.define('fetch market data', async (job) => {
 
     // Fetch Market Stats  
     if (requestCounters.marketStats < REQUEST_LIMITS.marketStats) {  
-      const marketStats = await nobitexService.getMarketStats(symbol.split('IRT')[0].toLowerCase(), 'rls');
-      
-      // Validate required fields
-      const requiredFields = [
-        'dayChange', 'dayClose', 'dayOpen', 'dayHigh', 'dayLow',
-        'mark', 'latest', 'volumeDst', 'volumeSrc', 'bestBuy', 'bestSell'
-      ];
-      const isValid = requiredFields.every(field => marketStats[field] !== undefined);
+      try {
+        const marketStats = await nobitexService.getMarketStats('btc', 'rls');
 
-      if (!isValid) {
-        console.warn(`Invalid market stats data for ${symbol}:`, marketStats);
-        return; // Skip saving invalid data
+        // Use upsert to avoid duplicates
+        await MarketStat.updateOne(
+          { symbol: marketStats.symbol },
+          { $set: marketStats },
+          { upsert: true }
+        );
+
+        console.log(`Market stats updated for ${marketStats.symbol}`);
+      } catch (error) {
+        console.error(`Error fetching market stats:`, error);
       }
 
-      await MarketStat.create({ symbol, data: marketStats });
       requestCounters.marketStats++;
     }  
 
