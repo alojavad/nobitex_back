@@ -83,13 +83,24 @@ agenda.define('fetch market data', async (job) => {
     if (requestCounters.trades < REQUEST_LIMITS.trades) {  
       const trades = await nobitexService.getTrades(symbol);
       if (trades && trades.trades && trades.trades.length > 0) {
-        await Trade.insertMany(trades.trades.map(trade => ({
-          symbol,
-          time: new Date(parseInt(trade.time)),
-          price: parseFloat(trade.price),
-          volume: parseFloat(trade.volume),
-          type: trade.type
-        })));
+        const validTrades = trades.trades.filter(trade => {
+          const tradeTime = new Date(parseInt(trade.time));
+          if (isNaN(tradeTime.valueOf())) {
+            console.warn(`Invalid timestamp for trade: ${JSON.stringify(trade)}`);
+            return false; // Skip invalid trades
+          }
+          return true;
+        });
+
+        await Trade.insertMany(
+          validTrades.map(trade => ({
+            symbol,
+            time: new Date(parseInt(trade.time)),
+            price: parseFloat(trade.price),
+            volume: parseFloat(trade.volume),
+            type: trade.type,
+          }))
+        );
       }
       requestCounters.trades++;  
     }  
