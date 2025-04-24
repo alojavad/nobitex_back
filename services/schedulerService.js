@@ -53,76 +53,76 @@ agenda.define('fetch market data', async (job) => {
     console.log(`[${new Date().toISOString()}] Fetching data for ${symbol}...`);  
 
     // Fetch OrderBook V3  
-    // if (requestCounters.orderBook < REQUEST_LIMITS.orderBook) {  
-    //   const orderBookV3 = await nobitexService.getOrderBook(symbol);  
-    //   await OrderBook.create({
-    //     symbol,
-    //     version: 'v3',
-    //     lastUpdate: new Date(parseInt(orderBookV3.lastUpdate)),
-    //     lastTradePrice: parseFloat(orderBookV3.lastTradePrice),
-    //     asks: orderBookV3.asks.map(([price, amount]) => ({
-    //       price: parseFloat(price),
-    //       amount: parseFloat(amount)
-    //     })),
-    //     bids: orderBookV3.bids.map(([price, amount]) => ({
-    //       price: parseFloat(price),
-    //       amount: parseFloat(amount)
-    //     }))
-    //   });  
-    //   requestCounters.orderBook++;  
-    // }  
+    if (requestCounters.orderBook < REQUEST_LIMITS.orderBook) {  
+      const orderBookV3 = await nobitexService.getOrderBook(symbol);  
+      await OrderBook.create({
+        symbol,
+        version: 'v3',
+        lastUpdate: new Date(parseInt(orderBookV3.lastUpdate)),
+        lastTradePrice: parseFloat(orderBookV3.lastTradePrice),
+        asks: orderBookV3.asks.map(([price, amount]) => ({
+          price: parseFloat(price),
+          amount: parseFloat(amount)
+        })),
+        bids: orderBookV3.bids.map(([price, amount]) => ({
+          price: parseFloat(price),
+          amount: parseFloat(amount)
+        }))
+      });  
+      requestCounters.orderBook++;  
+    }  
 
     // Fetch Depth  
-    // if (requestCounters.depth < REQUEST_LIMITS.depth) {  
-    //   const depth = await nobitexService.getDepth(symbol);  
-    //   await Depth.create({ symbol, data: depth });  
-    //   requestCounters.depth++;  
-    // }  
+    if (requestCounters.depth < REQUEST_LIMITS.depth) {  
+      const depth = await nobitexService.getDepth(symbol);  
+      await Depth.create({ symbol, data: depth });  
+      requestCounters.depth++;  
+    }  
 
     // Fetch Trades V2  
-    // if (requestCounters.trades < REQUEST_LIMITS.trades) {  
-    //   const trades = await nobitexService.getTrades(symbol);
-    //   if (trades && trades.trades && trades.trades.length > 0) {
-    //     const validTrades = trades.trades.filter(trade => {
-    //       const tradeTime = new Date(trade.time); // Directly use the ISO 8601 string
-    //       if (isNaN(tradeTime.valueOf())) {
-    //         console.warn(`Invalid timestamp for trade: ${JSON.stringify(trade)}`);
-    //         return false; // Skip invalid trades
-    //       }
-    //       return true;
-    //     });
+    if (requestCounters.trades < REQUEST_LIMITS.trades) {  
+      const trades = await nobitexService.getTrades(symbol);
+      if (trades && trades.trades && trades.trades.length > 0) {
+        const validTrades = trades.trades.filter(trade => {
+          const tradeTime = new Date(trade.time); // Directly use the ISO 8601 string
+          if (isNaN(tradeTime.valueOf())) {
+            console.warn(`Invalid timestamp for trade: ${JSON.stringify(trade)}`);
+            return false; // Skip invalid trades
+          }
+          return true;
+        });
 
-    //     try {
-    //       // Use bulkWrite to handle duplicates gracefully
-    //       const bulkOps = validTrades.map(trade => ({
-    //         updateOne: {
-    //           filter: {
-    //             symbol, // Ensure symbol is included
-    //             time: new Date(trade.time),
-    //             price: parseFloat(trade.price),
-    //             volume: parseFloat(trade.volume),
-    //             type: trade.type,
-    //           },
-    //           update: {
-    //             $setOnInsert: {
-    //               symbol, // Ensure symbol is included
-    //               time: new Date(trade.time),
-    //               price: parseFloat(trade.price),
-    //               volume: parseFloat(trade.volume),
-    //               type: trade.type,
-    //             },
-    //           },
-    //           upsert: true, // Insert if not exists
-    //         },
-    //       }));
+        try {
+          // Use bulkWrite to handle duplicates gracefully
+          const bulkOps = validTrades.map(trade => ({
+            updateOne: {
+              filter: {
+                symbol, // Ensure symbol is included
+                time: new Date(trade.time),
+                price: parseFloat(trade.price),
+                volume: parseFloat(trade.volume),
+                type: trade.type,
+              },
+              update: {
+                $setOnInsert: {
+                  symbol, // Ensure symbol is included
+                  time: new Date(trade.time),
+                  price: parseFloat(trade.price),
+                  volume: parseFloat(trade.volume),
+                  type: trade.type,
+                },
+              },
+              upsert: true, // Insert if not exists
+            },
+          }));
 
-    //       await Trade.bulkWrite(bulkOps);
-    //     } catch (error) {
-    //       console.error(`Error inserting trades for ${symbol}:`, error);
-    //     }
-    //   }
-    //   requestCounters.trades++;
-    // }
+          await Trade.bulkWrite(bulkOps);
+        } catch (error) {
+          console.error(`Error inserting trades for ${symbol}:`, error);
+        }
+      }
+      requestCounters.trades++;
+    }
 
     // Fetch Market Stats  
     if (requestCounters.marketStats < REQUEST_LIMITS.marketStats) {  
