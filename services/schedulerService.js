@@ -80,45 +80,49 @@ agenda.define('fetch market data', async (job) => {
     }  
 
     // Fetch Trades V2  
-if (requestCounters.trades < REQUEST_LIMITS.trades) {  
-  const trades = await nobitexService.getTrades(symbol);
-  if (trades && trades.trades && trades.trades.length > 0) {
-    const validTrades = trades.trades.filter(trade => {
-      const tradeTime = new Date(trade.time); // Directly use the ISO 8601 string
-      if (isNaN(tradeTime.valueOf())) {
-        console.warn(`Invalid timestamp for trade: ${JSON.stringify(trade)}`);
-        return false; // Skip invalid trades
-      }
-      return true;
-    });
-
-    for (const trade of validTrades) {
-      // Check if trade already exists in the database
-      const existingTrade = await Trade.findOne({
-        symbol: trade.symbol,
-        time: new Date(trade.time),
-        price: parseFloat(trade.price),
-        volume: parseFloat(trade.volume),
-        type: trade.type
-      });
-
-      if (!existingTrade) {
-        // Insert the new trade only if it doesn't exist
-        await Trade.create({
-          symbol: trade.symbol,
-          time: new Date(trade.time),
-          price: parseFloat(trade.price),
-          volume: parseFloat(trade.volume),
-          type: trade.type,
+    if (requestCounters.trades < REQUEST_LIMITS.trades) {  
+      const trades = await nobitexService.getTrades(symbol);
+      if (trades && trades.trades && trades.trades.length > 0) {
+        const validTrades = trades.trades.filter(trade => {
+          const tradeTime = new Date(trade.time); // Directly use the ISO 8601 string
+          if (isNaN(tradeTime.valueOf())) {
+            console.warn(`Invalid timestamp for trade: ${JSON.stringify(trade)}`);
+            return false; // Skip invalid trades
+          }
+          return true;
         });
-      } else {
-        console.log(`Trade already exists: ${JSON.stringify(trade)}`);
-      }
-    }
-  }
 
-  requestCounters.trades++;  
-}
+        try {
+          // Use bulkWrite to handle duplicates gracefully
+          const bulkOps = validTrades.map(trade => ({
+            updateOne: {
+              filter: {
+                symbol, // Ensure symbol is included
+                time: new Date(trade.time),
+                price: parseFloat(trade.price),
+                volume: parseFloat(trade.volume),
+                type: trade.type,
+              },
+              update: {
+                $setOnInsert: {
+                  symbol, // Ensure symbol is included
+                  time: new Date(trade.time),
+                  price: parseFloat(trade.price),
+                  volume: parseFloat(trade.volume),
+                  type: trade.type,
+                },
+              },
+              upsert: true, // Insert if not exists
+            },
+          }));
+
+          await Trade.bulkWrite(bulkOps);
+        } catch (error) {
+          console.error(`Error inserting trades for ${symbol}:`, error);
+        }
+      }
+      requestCounters.trades++;
+    }
 
     // Fetch Market Stats  
     if (requestCounters.marketStats < REQUEST_LIMITS.marketStats) {  
