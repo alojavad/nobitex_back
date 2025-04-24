@@ -55,7 +55,20 @@ agenda.define('fetch market data', async (job) => {
     // Fetch OrderBook V3  
     if (requestCounters.orderBook < REQUEST_LIMITS.orderBook) {  
       const orderBookV3 = await nobitexService.getOrderBook(symbol);  
-      await OrderBook.create({ symbol, type: 'v3', data: orderBookV3 });  
+      await OrderBook.create({
+        symbol,
+        version: 'v3',
+        lastUpdate: new Date(parseInt(orderBookV3.lastUpdate)),
+        lastTradePrice: parseFloat(orderBookV3.lastTradePrice),
+        asks: orderBookV3.asks.map(([price, amount]) => ({
+          price: parseFloat(price),
+          amount: parseFloat(amount)
+        })),
+        bids: orderBookV3.bids.map(([price, amount]) => ({
+          price: parseFloat(price),
+          amount: parseFloat(amount)
+        }))
+      });  
       requestCounters.orderBook++;  
     }  
 
