@@ -1,11 +1,8 @@
-const nobitexService = require('../services/nobitexService');
 const OrderBook = require('../models/OrderBook');
 const Trade = require('../models/Trade');
 const MarketStat = require('../models/MarketStat');
 const UDFHistory = require('../models/UDFHistory');
-const Depth =  require('../models/Depth');
-
-// ===== API‌های عمومی بازار =====
+const Depth = require('../models/Depth');
 
 // دریافت لیست سفارش‌ها
 exports.getOrderBook = async (req, res) => {
@@ -13,36 +10,17 @@ exports.getOrderBook = async (req, res) => {
     const { symbol } = req.params;
     const { version = 'v3' } = req.query;
 
-    // Validate required parameters
     if (!symbol) {
       return res.status(400).json({ error: 'Symbol is required' });
     }
 
-    // Fetch order book data from the service
-    const orderbook = await nobitexService.getOrderBook(symbol, version);
+    const orderBook = await OrderBook.findOne({ symbol, version }).sort({ lastUpdate: -1 });
 
-    // Validate the response
-    if (!orderbook || !orderbook.asks || !orderbook.bids) {
-      return res.status(500).json({ error: 'Invalid order book data received' });
+    if (!orderBook) {
+      return res.status(404).json({ error: 'Order book not found' });
     }
 
-    // Save order book to the database
-    await OrderBook.create({
-      symbol,
-      version,
-      lastUpdate: new Date(parseInt(orderbook.lastUpdate)),
-      lastTradePrice: parseFloat(orderbook.lastTradePrice),
-      asks: orderbook.asks.map(([price, amount]) => ({
-        price: parseFloat(price),
-        amount: parseFloat(amount),
-      })),
-      bids: orderbook.bids.map(([price, amount]) => ({
-        price: parseFloat(price),
-        amount: parseFloat(amount),
-      })),
-    });
-
-    res.json(orderbook);
+    res.json(orderBook);
   } catch (error) {
     console.error('Error in getOrderBook:', error);
     res.status(500).json({ error: error.message });
@@ -53,9 +31,20 @@ exports.getOrderBook = async (req, res) => {
 exports.getDepth = async (req, res) => {
   try {
     const { symbol } = req.params;
-    const depth = await nobitexService.getDepth(symbol);
+
+    if (!symbol) {
+      return res.status(400).json({ error: 'Symbol is required' });
+    }
+
+    const depth = await Depth.findOne({ symbol }).sort({ createdAt: -1 });
+
+    if (!depth) {
+      return res.status(404).json({ error: 'Depth data not found' });
+    }
+
     res.json(depth);
   } catch (error) {
+    console.error('Error in getDepth:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -64,16 +53,20 @@ exports.getDepth = async (req, res) => {
 exports.getTrades = async (req, res) => {
   try {
     const { symbol } = req.params;
-    const trades = await nobitexService.getTrades(symbol);
-    await Trade.insertMany(trades.trades.map(trade => ({
-      symbol,
-      time: new Date(parseInt(trade.timestamp)),
-      price: parseFloat(trade.price),
-      volume: parseFloat(trade.amount),
-      type: trade.type
-    })));
+
+    if (!symbol) {
+      return res.status(400).json({ error: 'Symbol is required' });
+    }
+
+    const trades = await Trade.find({ symbol }).sort({ time: -1 }).limit(100);
+
+    if (!trades || trades.length === 0) {
+      return res.status(404).json({ error: 'Trades not found' });
+    }
+
     res.json(trades);
   } catch (error) {
+    console.error('Error in getTrades:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -82,37 +75,13 @@ exports.getTrades = async (req, res) => {
 exports.getMarketStats = async (req, res) => {
   try {
     const { srcCurrency = 'btc', dstCurrency = 'rls' } = req.query;
-    const stats = await nobitexService.getMarketStats(srcCurrency, dstCurrency);
-    
-    // Validate required data
-    if (!stats || !stats.stats) {
-      return res.status(500).json({ error: 'Invalid market stats data received' });
-    }
+    const symbol = `${srcCurrency}-${dstCurrency}`;
 
-    const symbol = `${srcCurrency}${dstCurrency}`.toUpperCase();
-    const marketStat = stats.stats[symbol];
+    const marketStat = await MarketStat.findOne({ symbol }).sort({ updatedAt: -1 });
 
     if (!marketStat) {
-      return res.status(404).json({ error: `No stats found for symbol ${symbol}` });
+      return res.status(404).json({ error: `Market stats not found for symbol ${symbol}` });
     }
-
-    // Save market stats to database
-    await MarketStat.create({
-      symbol,
-      isClosed: marketStat.isClosed,
-      bestSell: parseFloat(marketStat.bestSell),
-      bestBuy: parseFloat(marketStat.bestBuy),
-      volumeSrc: parseFloat(marketStat.volumeSrc),
-      volumeDst: parseFloat(marketStat.volumeDst),
-      latest: parseFloat(marketStat.latest),
-      mark: parseFloat(marketStat.mark),
-      dayLow: parseFloat(marketStat.dayLow),
-      dayHigh: parseFloat(marketStat.dayHigh),
-      dayOpen: parseFloat(marketStat.dayOpen),
-      dayClose: parseFloat(marketStat.dayClose),
-      dayChange: parseFloat(marketStat.dayChange),
-      lastUpdate: new Date()
-    });
 
     res.json(marketStat);
   } catch (error) {
@@ -125,23 +94,34 @@ exports.getMarketStats = async (req, res) => {
 exports.getUDFHistory = async (req, res) => {
   try {
     const { symbol = 'BTCIRT', resolution = 'D', from, to } = req.query;
-    const history = await nobitexService.getUDFHistory(symbol, resolution, from, to);
-    if (history.s === 'ok') {
-      await UDFHistory.create({
-        symbol,
-        resolution,
-        from: new Date(parseInt(from) * 1000),
-        to: new Date(parseInt(to) * 1000),
-        timestamps: history.t.map(t => new Date(t * 1000)),
-        open: history.o.map(parseFloat),
-        high: history.h.map(parseFloat),
-        low: history.l.map(parseFloat),
-        close: history.c.map(parseFloat),
-        volume: history.v.map(parseFloat)
-      });
+
+    if (!symbol || !resolution || !from || !to) {
+      return res.status(400).json({ error: 'Symbol, resolution, from, and to are required' });
     }
+
+    // Convert the from and to parameters to Date objects (milliseconds)
+    // const fromDate = new Date(parseInt(from) * 1000);
+    // const toDate = new Date(parseInt(to) * 1000);
+
+    console.log('Request Parameters:', { symbol, resolution, from, to });
+
+    // Query for the UDFHistory record where the timestamp is within the given range
+    const history = await UDFHistory.findOne({
+      symbol,
+      resolution,
+      from: { $lte: from },
+      to: { $gte: to },
+    });
+
+    // If no history is found, send a 404 error
+    if (!history) {
+      return res.status(404).json({ error: 'UDF history not found' });
+    }
+
+    // Send the found history as a response
     res.json(history);
   } catch (error) {
+    console.error('Error in getUDFHistory:', error);
     res.status(500).json({ error: error.message });
   }
 };
