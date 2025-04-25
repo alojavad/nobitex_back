@@ -1,5 +1,6 @@
 const Agenda = require('agenda');  
 const nobitexService = require('./nobitexService');  
+const coinmarketcapService = require('./coinmarketcapService'); // Import CoinmarketcapService
 const OrderBook = require('../models/OrderBook');  
 const MarketStat = require('../models/MarketStat');  
 const Trade = require('../models/Trade');  
@@ -45,6 +46,53 @@ const agenda = new Agenda({
   },  
   processEvery: '10 seconds', // Jobs processed every 10 seconds  
 });  
+
+// Define CoinMarketCap jobs
+agenda.define('fetch cryptocurrency quotes', async (job) => {
+  try {
+    console.log(`[${new Date().toISOString()}] Fetching cryptocurrency quotes...`);
+    await coinmarketcapService.fetchAndSaveCryptocurrencyQuotes({ id: '1', convert: 'USD' });
+    console.log(`[${new Date().toISOString()}] Cryptocurrency quotes fetched and saved.`);
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching cryptocurrency quotes:`, error);
+  }
+});
+
+agenda.define('fetch OHLCV historical data', async (job) => {
+  try {
+    console.log(`[${new Date().toISOString()}] Fetching OHLCV historical data...`);
+    await coinmarketcapService.fetchAndSaveOHLCVData({ id: '1', time_start: '2023-01-01', time_end: '2023-12-31', convert: 'USD' });
+    console.log(`[${new Date().toISOString()}] OHLCV historical data fetched and saved.`);
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching OHLCV historical data:`, error);
+  }
+});
+
+agenda.define('fetch price performance stats', async (job) => {
+  try {
+    console.log(`[${new Date().toISOString()}] Fetching price performance stats...`);
+    await coinmarketcapService.fetchAndSavePricePerformanceStats({ id: '1', time_period: 'all_time', convert: 'USD' });
+    console.log(`[${new Date().toISOString()}] Price performance stats fetched and saved.`);
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching price performance stats:`, error);
+  }
+});
+
+agenda.define('fetch historical quotes (v3)', async (job) => {
+  try {
+    console.log(`[${new Date().toISOString()}] Fetching historical quotes (v3)...`);
+    await coinmarketcapService.fetchAndSaveHistoricalQuotesV3({
+      id: '1',
+      time_start: '2023-01-01T00:00:00Z',
+      time_end: '2023-12-31T23:59:59Z',
+      interval: 'daily',
+      convert: 'USD',
+    });
+    console.log(`[${new Date().toISOString()}] Historical quotes (v3) fetched and saved.`);
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching historical quotes (v3):`, error);
+  }
+});
 
 // تعریف وظایف  
 agenda.define('fetch market data', async (job) => {  
@@ -185,6 +233,14 @@ SYMBOLS.forEach((symbol) => {
   });  
 });  
 
+// Schedule CoinMarketCap jobs
+async function scheduleCoinMarketCapJobs() {
+  await agenda.every('1 hour', 'fetch cryptocurrency quotes');
+  await agenda.every('1 day', 'fetch OHLCV historical data');
+  await agenda.every('1 day', 'fetch price performance stats');
+  await agenda.every('1 day', 'fetch historical quotes (v3)');
+}
+
 // تابع شروع زمان‌بندی  
 async function startScheduler() {  
   await agenda.start();  
@@ -194,8 +250,15 @@ async function startScheduler() {
     agenda.every(FETCH_INTERVAL, 'fetch market data', { symbol });  
   });  
 
+  // Schedule CoinMarketCap jobs
+  await scheduleCoinMarketCapJobs();
+
   console.log('Agenda started. Jobs scheduled:');  
   console.log(`- Fetch market data every ${FETCH_INTERVAL} for symbols: ${SYMBOLS.join(', ')}`);  
+  console.log('- Fetch cryptocurrency quotes every 1 hour');
+  console.log('- Fetch OHLCV historical data every 1 day');
+  console.log('- Fetch price performance stats every 1 day');
+  console.log('- Fetch historical quotes (v3) every 1 day');
 }  
 
 // تابع توقف زمان‌بندی  

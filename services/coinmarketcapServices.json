@@ -1,0 +1,109 @@
+{
+  "marketPairs": {
+    "serviceName": "marketPairs",
+    "functions": {
+      "fetchLatest": {
+        "endpoint": "/v2/cryptocurrency/market-pairs/latest",
+        "requiredParams": ["id", "symbol", "slug"],
+        "optionalParams": [
+          "start", "limit", "sort_dir", "sort", "aux", "matched_id", "matched_symbol", "category", "fee_type", "convert", "convert_id"
+        ]
+      }
+    }
+  },
+  "ohlcv": {
+    "serviceName": "ohlcv",
+    "functions": {
+      "fetchHistorical": {
+        "endpoint": "/v2/cryptocurrency/ohlcv/historical",
+        "requiredParams": ["id", "symbol", "slug"],
+        "optionalParams": [
+          "time_period", "time_start", "time_end", "count", "interval", "convert", "convert_id", "skip_invalid"
+        ]
+      },
+      "fetchLatest": {
+        "endpoint": "/v2/cryptocurrency/ohlcv/latest",
+        "requiredParams": ["id", "symbol"],
+        "optionalParams": ["convert", "convert_id", "skip_invalid"]
+      }
+    }
+  },
+  "quotes": {
+    "serviceName": "quotes",
+    "functions": {
+      "fetchLatest": {
+        "endpoint": "/v2/cryptocurrency/quotes/latest",
+        "requiredParams": ["id", "symbol"],
+        "optionalParams": ["convert", "convert_id", "aux", "skip_invalid"]
+      },
+      "fetchHistorical": {
+        "endpoint": "/v2/cryptocurrency/quotes/historical",
+        "requiredParams": ["id", "symbol"],
+        "optionalParams": [
+          "time_start", "time_end", "count", "interval", "convert", "convert_id", "aux", "skip_invalid"
+        ]
+      }
+    }
+  },
+  "pricePerformanceStats": {
+    "serviceName": "pricePerformanceStats",
+    "functions": {
+      "fetchLatest": {
+        "endpoint": "/v2/cryptocurrency/price-performance-stats/latest",
+        "requiredParams": ["id", "symbol", "slug"],
+        "optionalParams": ["time_period", "convert", "convert_id", "skip_invalid"]
+      }
+    }
+  },
+  "listings": {
+    "serviceName": "listings",
+    "functions": {
+      "fetchLatest": {
+        "endpoint": "/v1/cryptocurrency/listings/latest",
+        "requiredParams": [],
+        "optionalParams": [
+          "start", "limit", "convert", "convert_id", "sort", "sort_dir", "cryptocurrency_type", "tag", "aux"
+        ]
+      },
+      "fetchHistorical": {
+        "endpoint": "/cryptocurrency/listings/historical",
+        "requiredParams": ["date"],
+        "optionalParams": ["start", "limit", "convert", "sort", "sort_dir"]
+      }
+    }
+  },
+  "trending": {
+    "serviceName": "trending",
+    "functions": {
+      "fetchGainersAndLosers": {
+        "endpoint": "/v1/cryptocurrency/trending/gainers-losers",
+        "requiredParams": [],
+        "optionalParams": [
+          "start", "limit", "time_period", "convert", "convert_id", "sort", "sort_dir"
+        ]
+      }
+    }
+  },
+  "map": {
+    "serviceName": "map",
+    "functions": {
+      "fetchCryptoMap": {
+        "endpoint": "/cryptocurrency/map",
+        "requiredParams": [],
+        "optionalParams": [
+          "listing_status", "start", "limit", "sort", "symbol", "aux"
+        ]
+      }
+    }
+  },
+  "info": {
+    "serviceName": "info",
+    "functions": {
+      "fetchCryptoInfo": {
+        "endpoint": "/v2/cryptocurrency/info",
+        "requiredParams": ["id", "symbol", "slug", "address"],
+        "optionalParams": ["skip_invalid", "aux"]
+      }
+    }
+  }
+}
